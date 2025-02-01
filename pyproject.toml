@@ -9,6 +9,7 @@ dependencies = [
     "matplotlib>=3.10.0",
     "numpy>=2.2.2",
     "polars>=1.21.0",
+    "pycountry-convert>=0.7.2",
     "pycountry>=24.6.1",
     "streamlit>=1.41.1",
 ]

@@ -17,12 +17,11 @@ from matplotlib.cm import ScalarMappable
 
 import pycountry_convert as pc
 import pycountry
+from PIL import Image
 
 
+st.set_page_config(layout="wide", initial_sidebar_state="expanded")
 
-st.set_page_config(
-    page_title="Electricity"
-)
 
 ### Preprocessing
 url='./WDICSV.csv'
@@ -106,9 +105,12 @@ def get_data(url):
           .alias("Continent")
     )
 
-    return data
+    world_data=data.filter(pl.col("Country Name")=="World")
+    data=data.filter(pl.col("Country Name")!="World")
 
-data=get_data(url)
+    return world_data, data
+
+world_data, data=get_data(url)
 
 
 # Introduction
@@ -119,10 +121,10 @@ variable_descriptions = [
     {"Variable": "total_rate", "Description": "Percentage of population with access to electricity", "Example": "15.2"},
     {"Variable": "rural_rate", "Description": "Percentage of rural population with access to electricity", "Example": "6.6"},
     {"Variable": "urban_rate", "Description": "Percentage of urban population with access to electricity", "Example": "49.9"},
-    #{"Variable": "oil_gas_coal", "Description": "Electricity production from oil (refers to crude oil and petroleum products), gas (refers to natural gas but excludes natural gas liquids), coal (refers to all coal and brown coal) Peat is also included in this cathegory  (% of total)", "Example": "12.48"},
-    #{"Variable": "nuclear", "Description": "Electricity production from nuclear power (% of total)", "Example": "0"},
-    #{"Variable": "renewable", "Description": "Electricity production from renewable sources, excluding hydroelectric, includes geothermal, solar, tides, wind, biomass, and biofuels  (% of total)", "Example": "48.27"},
-    #{"Variable": "hydroelectric", "Description": "Electricity production from hydroelectric power plants (% of total)", "Example": "39.24"},
+    {"Variable": "oil_gas_coal", "Description": "Electricity production from oil (refers to crude oil and petroleum products), gas (refers to natural gas but excludes natural gas liquids), coal (refers to all coal and brown coal) Peat is also included in this cathegory  (% of total)", "Example": "12.48"},
+    {"Variable": "nuclear", "Description": "Electricity production from nuclear power (% of total)", "Example": "0"},
+    {"Variable": "renewable", "Description": "Electricity production from renewable sources, excluding hydroelectric, includes geothermal, solar, tides, wind, biomass, and biofuels  (% of total)", "Example": "48.27"},
+    {"Variable": "hydroelectric", "Description": "Electricity production from hydroelectric power plants (% of total)", "Example": "39.24"},
     {"Variable": "energy_imports", "Description": "Net energy imports are estimated as energy use less production, both measured in oil equivalents. A negative value indicates that the country is a net exporter. Energy use refers to use of primary energy before transformation to other end-use fuels, which is equal to indigenous production plus imports and stock changes, minus exports and fuels supplied to ships and aircraft engaged in international transport", "Example":"18.35"},
     {"Variable": "GDP", "Description": "GDP per capita is gross domestic product divided by midyear population. GDP is the sum of gross value added by all resident producers in the economy plus any product taxes and minus any subsidies not included in the value of the products. It is calculated without making deductions for depreciation of fabricated assets or for depletion and degradation of natural resources. Data are in constant 2015 U.S. dollars.", "Example": "1195.41"},
     {"Variable": "Continent", "Description": "Continent the country belongs", "Example": "Africa"}
@@ -130,6 +132,16 @@ variable_descriptions = [
 variable_table = pd.DataFrame(variable_descriptions)
 
 
+
+
+# Color map for continents
+color_map_continents = {
+    'Europe': 'red',         
+    'North America': '#1f78b4',   
+    'South America': '#a6cee3',   
+    'Asia/Oceania': '#33a02c',    
+    'Africa': '#fb9a99'          
+}
 
 
 # Access to electricity
@@ -143,9 +155,8 @@ def linechart_world():
     )
 
     # Filter data for World and selected years
-    world_data=data.filter(
-        (pl.col("Country Code")=="WLD") &
-        (pl.col("year").cast(int).is_between(year_range[0], year_range[1]))
+    filtered_data=world_data.filter(
+        pl.col("year").cast(int).is_between(year_range[0], year_range[1])
     )
 
     # Selection for highlighting points
@@ -157,13 +168,13 @@ def linechart_world():
     )
 
     # Line chart for total_rate over years
-    line = alt.Chart(world_data).mark_line().encode(
+    line = alt.Chart(filtered_data).mark_line().encode(
         x=alt.X("year:O", title="Year"),
         y=alt.Y("total_rate:Q", title="Access to Electricity (%)", scale=alt.Scale(zero=False)),
     )
 
     # Adding points on the line with tooltips
-    points = alt.Chart(world_data).mark_point(size=50, filled=True).encode(
+    points = alt.Chart(filtered_data).mark_point(size=50, filled=True).encode(
         x=alt.X("year:O"),
         y=alt.Y("total_rate:Q"),
         size=alt.condition(
@@ -434,8 +445,7 @@ def scatterplot_urban_rural():
     # Filter data for selected year, remove World and null values
     filtered_data = data.filter(
         (pl.col("year") == str(selected_year)) &  
-        (pl.col("urban_rate").is_not_null()) &
-        (pl.col("Country Name")!="World")
+        (pl.col("urban_rate").is_not_null()) 
     ).select(["Country Name", "Continent","urban_rate", "rural_rate"])
 
     if filtered_data.is_empty():
@@ -466,15 +476,6 @@ def scatterplot_urban_rural():
         empty="none"      # No selection by default
     )
 
-    # Color map for continents
-    color_map = {
-        'Europe': 'red',         
-        'North America': '#1f78b4',   
-        'South America': '#a6cee3',   
-        'Asia/Oceania': '#33a02c',    
-        'Africa': '#fb9a99'          
-    }
-
     # Base chart for other countries
     base_chart = alt.Chart(other_countries_data.to_pandas()).mark_point(size=100, filled=True).encode(
         x=alt.X("rural_rate:Q", title="Access to Electricity in rural areas (%)", scale=alt.Scale(zero=False)),
@@ -483,8 +484,8 @@ def scatterplot_urban_rural():
             "Continent:N",
             title="Continent",
             scale=alt.Scale(
-                domain=list(color_map.keys()),
-                range=list(color_map.values())
+                domain=list(color_map_continents.keys()),
+                range=list(color_map_continents.values())
             )
         ),
         size=alt.condition(
@@ -509,8 +510,8 @@ def scatterplot_urban_rural():
             "Continent:N",
             title="Continent",
             scale=alt.Scale(
-                domain=list(color_map.keys()),
-                range=list(color_map.values())
+                domain=list(color_map_continents.keys()),
+                range=list(color_map_continents.values())
             )
         ),
         size=alt.value(600),   # bigger size for the selected country
@@ -795,15 +796,6 @@ def scatterplot_access_gdp():
     if filtered_data.is_empty():
         st.warning("Nessun dato disponibile per l'anno selezionato.")
         return
-    
-    # Color map for continents
-    color_map = {
-        'Europe': 'red',         
-        'North America': '#1f78b4',   
-        'South America': '#a6cee3',   
-        'Asia/Oceania': '#33a02c',    
-        'Africa': '#fb9a99' 
-    }
 
     # Selection for highlighting points
     highlight = alt.selection_point(
@@ -826,8 +818,8 @@ def scatterplot_access_gdp():
             "Continent:N",
             title="Continent",
             scale=alt.Scale(
-                domain=list(color_map.keys()),
-                range=list(color_map.values())
+                domain=list(color_map_continents.keys()),
+                range=list(color_map_continents.values())
             )
         ),
         size=alt.condition(
@@ -1017,8 +1009,7 @@ def scatterplot_access_imports():
         return data.filter(
                 (pl.col("year").cast(int).is_between(1990, 2014)) & 
                 (pl.col("total_rate").is_not_null()) &
-                (pl.col("energy_imports").is_not_null()) &
-                (pl.col("Country Name")!="World") 
+                (pl.col("energy_imports").is_not_null())
             ).select("energy_imports").to_series().min()
     min_energy_imports = compute_min_energy_imports()
 
@@ -1060,15 +1051,6 @@ def scatterplot_access_imports():
     if filtered_data.is_empty():
         st.warning("Nessun dato disponibile per l'anno selezionato.")
         return
-    
-    # Color map for continents
-    color_map = {
-        'Europe': 'red',         
-        'North America': '#1f78b4',   
-        'South America': '#a6cee3',   
-        'Asia/Oceania': '#33a02c',    
-        'Africa': '#fb9a99' 
-    }
 
     # Selection for highlighting points
     highlight = alt.selection_point(
@@ -1091,8 +1073,8 @@ def scatterplot_access_imports():
             "Continent:N",
             title="Continent",
             scale=alt.Scale(
-                domain=list(color_map.keys()),
-                range=list(color_map.values())
+                domain=list(color_map_continents.keys()),
+                range=list(color_map_continents.values())
             )
         ),
         size=alt.condition(
@@ -1112,48 +1094,57 @@ def scatterplot_access_imports():
 
 
 
+
+
+
+
+
+
 # Energy sources
 def energy_trend_chart():
+    # Select year range
     year_range = st.slider(
         "Select years:",
         min_value=1971,
         max_value=2015,
-        value=(1971, 2015)  # Valore iniziale: tutto il range
+        value=(1971, 2015) 
     )
-    world_data = data.filter(
-        (pl.col("Country Name") == "World")& 
+
+    # Filter data from world_data
+    filtered_data = world_data.filter( 
         (pl.col("year").cast(int).is_between(year_range[0], year_range[1]))
+        ).select(["year", "oil_gas_coal", "nuclear", "hydroelectric", "renewable"])
 
-    ).select(["year", "oil_gas_coal", "nuclear", "hydroelectric", "renewable"])
-
-    world_data_long = world_data.unpivot(
-        index="year",  # Colonna che rimane invariata
-        variable_name="Energy Source",  # Nuova colonna per le fonti di energia
-        value_name="Percentage"  # Nuova colonna per i valori
+    world_data_long = filtered_data.unpivot(
+        index="year",  
+        variable_name="Energy Source",  
+        value_name="Percentage" 
     )
 
-
+    # Selection for highlighting points
     highlight = alt.selection_point(
-        fields=["year", "Energy Source"],  # Campo su cui attivare la selezione
-        nearest=True,     # Seleziona il punto più vicino
-        on="mouseover",   # Attivazione al passaggio del mouse
-        empty="none"      # Non selezionare niente di default
+        fields=["year", "Energy Source"],  
+        nearest=True,     
+        on="mouseover", 
+        empty="none"   
     )
 
+    # Line chart for Energy Source
     line = alt.Chart(world_data_long).mark_line().encode(
         x=alt.X("year:O", title="Year", scale=alt.Scale(zero=False)),
         y=alt.Y("Percentage:Q", title="Energy production (%)"),
         color=alt.Color("Energy Source:N", title="Energy Source")
     )
 
+    # Add points
     points = alt.Chart(world_data_long).mark_point(size=50, filled=True).encode(
         x=alt.X("year:O"),
         y=alt.Y("Percentage:Q"),
         color=alt.Color("Energy Source:N",scale=alt.Scale(domain=["oil_gas_coal", "nuclear", "hydroelectric", "renewable"])),
         size=alt.condition(
-            highlight,  # Se è selezionato
-            alt.value(200),  # Dimensione del punto selezionato
-            alt.value(50)    # Dimensione dei punti normali
+            highlight, 
+            alt.value(200),  
+            alt.value(50)
         ),
         tooltip=[
             alt.Tooltip("Energy Source:N", title="Energy Source"),
@@ -1161,56 +1152,53 @@ def energy_trend_chart():
             alt.Tooltip("Percentage:Q", title="Energy production (%)", format=".2f")
         ]
     ).add_params(
-        highlight  # Aggiungi la selezione
+        highlight  
     )
 
-
+    # Combine line and points
     chart = (line + points).properties(
         width=800,
         height=400
     )
 
-    # Mostra il grafico con Streamlit
+    # Displaa chart in Streamlit
     st.altair_chart(chart, use_container_width=True)
 
 def circle_chart():
-    # Elenco di paesi basato sui dati
-    countries = data.select("Country Name").unique().to_series().to_list()
-    countries = sorted(countries)
-
-    # Dropdown per selezionare un paese
+    # Select a country
+    countries = sorted(data.select("Country Name").unique().to_series().to_list())
     country = st.selectbox(
         "Select one country: ",
         countries,
         index=countries.index("Kenya")
     )
 
+    # Select a year
     year = st.slider("Select the year: ", min_value=1960, max_value=2015, value=1990, key="circle_chart_year_slider" )
 
+    # Filter data
     filtered_data=data.filter(
         (pl.col("Country Name")==country) &
         (pl.col("year")==str(year))
     ).select(["oil_gas_coal", "nuclear", "hydroelectric", "renewable"])
 
     filtered_data_long = filtered_data.unpivot(
-        
-        variable_name="Energy Source",  # Nuova colonna per le fonti di energia
-        value_name="Percentage"  # Nuova colonna per i valori
+        variable_name="Energy Source",  
+        value_name="Percentage"  
     ).filter(
-        ~pl.col("Percentage").is_null()  # Rimuove le righe con valori nulli
+        ~pl.col("Percentage").is_null()  
     )
 
-    # Verifica se ci sono dati dopo aver rimosso i nulls
     if filtered_data_long.height == 0:
         st.warning(f"No data available for {country} in {year}.")
         return
 
-
+    # Pie chart
     chart = (
         alt.Chart(filtered_data_long)   
         .mark_arc(radius=80, radius2=130, cornerRadius=10)  
         .encode(
-            theta=alt.Theta("Percentage:Q"),  # aggregate='sum' per fare in modo venga fuori tutto unito, e non le varie linee che separano gli stati
+            theta=alt.Theta("Percentage:Q"),  
             color=alt.Color("Energy Source:N",scale=alt.Scale(domain=["oil_gas_coal", "nuclear", "hydroelectric", "renewable"])),
             tooltip=[
                 alt.Tooltip("Energy Source"),
@@ -1219,6 +1207,7 @@ def circle_chart():
         )
     )
 
+    # Set labels
     text=(
         alt.Chart(filtered_data_long)
             .mark_text(radius=160, radius2=150, cornerRadius=100, size=20).encode(
@@ -1229,6 +1218,7 @@ def circle_chart():
         
     )
 
+    # Combine chart and text
     chart = (
             chart + text
         ).properties(
@@ -1236,20 +1226,20 @@ def circle_chart():
             height=400
         )
     
-
+    # Display the chart in Streamlit
     st.altair_chart(chart, use_container_width=True)
 
 def stackedchart():
-    countries = data.filter(
-        ~pl.col("oil_gas_coal").is_null()  # Trova righe dove 'oil_gas_coal' non è null
-    ).select("Country Name").unique().to_series().to_list()
-    countries = sorted(countries)
+    # List of countries
+    countries = sorted(data.filter(
+        ~pl.col("oil_gas_coal").is_null()  
+    ).select("Country Name").unique().to_series().to_list())
 
-
+    # Select countries
     selected_countries = st.multiselect(
         "Select one or more countries (max 7): ",
         countries,
-        default=["Italy", "France", "Germany", "China", "United States"],
+        default=["Italy", "France", "Germany", "United States"],
         max_selections=7,
     )
 
@@ -1257,13 +1247,15 @@ def stackedchart():
         st.warning("Select at least one country to visualize the data")
         return
 
+    # Select year
     selected_year = st.slider(
         "Select the year: ",
         min_value=1960,
         max_value=2015,
-        value=1990,
+        value=2000,
     )
 
+    # Filter data
     filtered_data = data.filter(
         (pl.col("Country Name").is_in(selected_countries)) & 
         (pl.col("year") == str(selected_year))
@@ -1274,6 +1266,7 @@ def stackedchart():
         value_name="Percentage", 
     )
     
+    # Chart
     chart = alt.Chart(filtered_data).mark_bar().encode(
         x=alt.X("sum(Percentage):Q", stack="normalize", title="Energy production (%)"),
         y=alt.Y("Country Name:N", title="Country"),
@@ -1290,60 +1283,105 @@ def stackedchart():
         height=400,
     )
 
+    # Display chart
     st.altair_chart(chart, use_container_width=True)
 
-# Access to electricity vs energy sources
-def scatterplot(data):
-    # Selezione dell'anno tramite slider
+def merge_data_energy_source(data, geojson, selected_source):
+    # Create a dictionary mapping Country Code to the selected source
+    data_dict = data.set_index('Country Code')[selected_source].to_dict()
+
+    # Iterate over each country in the GeoJSON
+    for feature in geojson['features']:
+        country_code = feature['id']
+        value = data_dict.get(country_code, None) 
+        if pd.notnull(value):  
+            #Assign selected source a value
+            feature["properties"][selected_source] = round(float(value), 2) 
+        else:
+            # Assing None if data is missing
+            feature["properties"][selected_source] = None
+    return geojson
+
+def map_energy_sources():
+    # Load GeoJSON data
+    geojson = load_geojson()
+
+    # Slider to select the year
     selected_year = st.slider(
         "Select the year:",
-        min_value=1990,
+        min_value=1960,
         max_value=2015,
-        value=2015,  # Valore iniziale
+        value=2000,
     )
 
-    # Selezione della risorsa energetica da confrontare
-    energy_sources = ["oil_gas_coal", "nuclear", "renewable", "hydroelectric"]
-    selected_energy = st.selectbox(
+    sources = ["oil_gas_coal", "nuclear", "hydroelectric", "renewable"]
+    selected_source = st.selectbox(
         "Select one energy source:",
-        options=energy_sources,
-        format_func=lambda x: {
-            "oil_gas_coal": "Oil, Gas, Coal",
-            "nuclear": "Nuclear",
-            "renewable": "Renewable",
-            "hydroelectric": "Hydroelectric",
-        }.get(x, x),
+        sources,
+        index=sources.index("oil_gas_coal"))
+    
+    # Filter data for the selected year 
+    filtered_data = (
+        data.filter(pl.col("year") == str(selected_year))
+            .select(["Country Name", "Country Code", selected_source])
+            .drop_nulls([selected_source])
     )
 
-    # Filtrare i dati per l'anno selezionato
-    filtered_data = data.filter(
-        (pl.col("year") == str(selected_year)) & 
-        (pl.col(selected_energy).is_not_null()) & 
-        (pl.col("total_rate").is_not_null()) &
-        (pl.col("Country Name")!="World")
-    ).select(["Country Name", "total_rate", "Continent", selected_energy])
+    # Merge filtered data with GeoJSON data
+    merged_geojson = merge_data_energy_source(filtered_data.to_pandas(), geojson, selected_source=selected_source)
 
-    if filtered_data.is_empty():
-        st.warning("Nessun dato disponibile per l'anno selezionato.")
-        return
+    min_rate = 0
+    max_rate = 100
 
-    # Creare il grafico scatterplot
-    chart = alt.Chart(filtered_data.to_pandas()).mark_point(size=100, filled=True).encode(
-        x=alt.X("total_rate:Q", title="Access to Electricity (%)"),
-        y=alt.Y(selected_energy, title=f"Usage of {selected_energy.capitalize()} (%)"),
-        tooltip=[
-            alt.Tooltip("Country Name:N", title="Country"),
-            alt.Tooltip("total_rate:Q", title="Access (%)", format=".2f"),
-            alt.Tooltip(selected_energy, title=f"Usage of {selected_energy.capitalize()} (%)", format=".2f"),
-        ],
-        color=alt.Color("Continent:N", title="Continent")
-    ).properties(
-        width=800,
-        height=600
+    # Assign colors
+    merged_geojson = assign_color(merged_geojson, min_rate, max_rate, variable=selected_source, colormap_name="Greens")
+
+    # Create a GeoJSON layer for the map
+    geojson_layer = pdk.Layer(
+        "GeoJsonLayer",
+        data=merged_geojson,
+        pickable=True,
+        filled=True,
+        stroked=True,
+        get_fill_color="properties.fill_color",  
+        get_line_color=[0, 0, 0],
+        line_width_min_pixels=1
     )
 
-    # Mostrare il grafico
-    st.altair_chart(chart, use_container_width=True)
+    # Set the initial view of the map
+    view_state = pdk.ViewState(
+        latitude=35,
+        longitude=15,
+        zoom=0.4,
+        pitch=0
+    )
+
+    # Set tooltip
+    deck = pdk.Deck(
+        layers=[geojson_layer],
+        initial_view_state=view_state,
+        tooltip={
+        "html": "<b>Country:</b> {name}<br/><b>" +
+                selected_source + ": {"+selected_source+"}",
+        "style": {"color": "white"}
+    }
+    )
+
+    # Create two columns
+    col1, col2 = st.columns([7, 1])  
+    with col1:
+        # Display the map
+        st.pydeck_chart(deck)
+    with col2:
+        # Display the legend
+        fig = create_legend('Greens', min_rate, max_rate, text="Percentage use of \n "+selected_source)
+        st.pyplot(fig)
+
+
+
+
+
+
 
 
 
@@ -1352,20 +1390,52 @@ def scatterplot(data):
 
 ### Pages
 def page_introduction():
-    st.markdown("# ACCESS TO ELECTRICITY ")
-    st.markdown("## How does the access to electricity varies around the world? How does it differ in urban and rural areas? Is this related to GDP or energy imports?")
-    
-    
-    st.markdown("""  
-                ### The dataset:""")
+    image = Image.open("world_image.jpg")
+    st.image(image, use_container_width=True)
+    st.markdown("""
+        <style>
+            .title-container {
+                position: relative;
+                text-align: center;
+                margin-top: -160px;  /* Moves the text over the image */
+            }
+            .title-text {
+                font-size: 100px;
+                font-weight: bold;
+                color: white;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            }
+        </style>
+        <div class="title-container">
+            <div class="title-text">ACCESS TO ELECTRICITY</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(""" 
+    ## How does the access to electricity vary around the WORLD over TIME?
+    ## How does it differ in URBAN and RURAL areas?
+    ## Is this related to GDP or ENERGY IMPORTS?
+    """)
+
+    st.markdown("<br><br>", unsafe_allow_html=True) 
+
+    col1, col2, col3 = st.columns([4, 1, 1])
+    with col1:
+        st.markdown("### The dataset:")
+
+    with col2:
+        st.download_button("Download CSV", data=data.to_pandas().to_csv(index=False), file_name="data.csv", mime="text/csv")
+
+    with col3:
+        st.download_button("Download Excel", data=data.to_pandas().to_csv(index=False), file_name="data.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
     st.write(data)
     st.markdown('### Variables description: ')
     st.table(variable_table)
     #st.write(data.filter((pl.col("Country Name")=="Kenya") & (pl.col("year")=="2000")))
     
-    st.markdown("Data source: https://databank.worldbank.org/source/world-development-indicators/")
-
-
+    st.markdown("**Project by Elena Rossetto** | Data Source: [World Bank](https://databank.worldbank.org/source/world-development-indicators)", unsafe_allow_html=True)
+    
 def page_access_electricity():
     st.markdown("# Access to electricity")
 
@@ -1384,7 +1454,7 @@ def page_access_electricity():
     linechart_countries()
 
     st.markdown("""
-    ## :question: Is access to electricity increasing over time  across the world? 
+    ## Is access to electricity increasing over time? How does it varies around the world?
 
     ### :pushpin: Key observations  
     - :chart_with_upwards_trend: **LINE CHART:** Continuous increase in global electricity access from 1998 to 2022, with access rising from around 72% to over 90%.  
@@ -1413,7 +1483,7 @@ def page_access_urban_rural():
     st.markdown("<br><br><br>", unsafe_allow_html=True)
 
     st.markdown("""
-    ## :question: Is access to electricity different in rural and urban areas?
+    ## Is access to electricity different in rural and urban areas?
 
     ### :pushpin: Key observations
     - :red_circle: **SCATTERPLOT:** 
@@ -1444,7 +1514,7 @@ def page_gdp():
 
 
     st.markdown("""
-    ## :question: Is There a Relationship Between ACCESS TO ELECTRICITY and GDP?
+    ## Is There a Relationship Between ACCESS TO ELECTRICITY and GDP?
 
     ### :pushpin: Key observations
 
@@ -1464,9 +1534,28 @@ def page_gdp():
 
 def page_energy_imports():
     st.markdown("# Access to electricity vs energy imports")
-
+    st.markdown(r""" 
+    $$
+    \text{Energy Imports (\%)} = \left( \frac{\text{Energy Use} - \text{Energy Production}}{\text{Energy Use}} \right) \times 100
+    $$
+    """)
+    st.markdown(
+        """
+        <div style="background-color: #262730; padding: 15px; border-radius: 8px; border: 1px solid #ccc;">
+            <p style="color: white; font-size: 18px;">
+                <strong>ENERGY IMPORTS</strong> = percentage of energy a country imports relative to its total energy consumption.
+            </p>
+                    <p style="color: white; font-size: 16px; margin-left: 30px;">
+                    - <strong>POSITIVE VALUE</strong>: the country imports energy (e.g., 100% means it imports all the energy it consumes).<br>
+                    - <strong>NEGATIVE VALUE</strong>: the country exports more energy than it consumes (e.g., −600% means it exports six times its own consumption).
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     st.markdown("## Map for percentage of energy imports around the world")
-    st.markdown("This interactive map shows the percentage of net energy imports relative to total energy use (1990-2014). Blue countries depend on energy imports, while red countries are net exporters, meaning they produce more energy than they consume. White areas have balanced values. Use the slider to select a year and zoom or pan to explore regions.")
+    st.markdown("This interactive map shows the percentage of net energy imports relative to total energy use (1990-2014). Blue countries depend on energy imports, while red countries are net exporters, meaning they produce more energy than they consume. White areas have balanced values. Use the slider to select a year.")
+    
     map_imports()
     st.markdown("<br><br><br>", unsafe_allow_html=True)  
     
@@ -1477,18 +1566,18 @@ def page_energy_imports():
 
 
     st.markdown("""
-    ## :question: Is there a relationship between ACCESS TO ELECTRICITY and ENERGY IMPORTS?
+    ## Is there a relationship between ACCESS TO ELECTRICITY and ENERGY IMPORTS?
 
     ### :pushpin: Key observations
     - :earth_africa: **MAP:**  
         - **Europe:** mainly imports, except for Norway
         - **Africa and Middle East:** several countries export huge quantities of energy
     - :red_circle: **SCATTERPLOT:** 
-        - **Africa:** some countries have limited electrification, despite exporting large amounts of energy, likely due to weak infrastructure and low investment.
+        - **Africa:** some countries experience limited electrification despite exporting far more energy than they consume, likely due to weak infrastructure and low investment.
         - Strong variability in countries with high access to electricity (expecially in Asia/Oceania): many countries rely on energy imports, while others export large amounts of energy.
          
     ## :exclamation: Conclusions
-    - :x: There's no single, clear relationship between access to electricity and energy imports. This relationship depends on various factors, such as local resources, infrastructure, policies and investments.
+    - :x: There's a complex relationship between access to electricity and energy imports. This relationship depends on various factors, such as local resources, infrastructure, policies and investments.
                 
     - :x: Energy exports do not guarantee access to electricity: infrastructure, policies and international agreements on energy resource utilization all play a crucial role in ensuring widespread electrification.  
     """)
@@ -1496,21 +1585,39 @@ def page_energy_imports():
 
 
 def page_energy_sources():
-    st.title("Energy sources")
-
-    st.header("Energy sources in the world")
+    st.markdown("# An overview to energy sources around the world")
+    
+    st.markdown("## Energy sources in the world")
+    st.markdown("The line chart displays the trend of every energy source in the world from 1971 to 2015. Use the slidebar to change the year range.")
     energy_trend_chart()
-
-    st.header("Energy sources in a single country")
+    st.markdown("<br><br><br>", unsafe_allow_html=True)  
+    
+    st.markdown("## Energy sources in a single country")
+    st.markdown("The pie chart shows the percentage of energy source in a single country in a specific year. Change the country and the year to explore more.")
     circle_chart()
+    st.markdown("<br><br><br>", unsafe_allow_html=True)  
 
-    st.header("Comparing countries")
+    st.markdown("## Comparing countries")
+    st.markdown("The chart displays the percentage of energy source in more country in a specific year. Change the countries and year to explore more.")
     stackedchart()
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
 
+    st.markdown("## Overall view of a single energy source around the world")
+    st.markdown("This map shows the percentage use of a selected energy source around the world for a specific year. Select an energy source to explore its global distribution.")
+    map_energy_sources()
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
 
-def page_access_energy():
-    st.title("Access to electricity vs energy sources")
-    scatterplot(data)
+    st.markdown("""
+    ### :pushpin: Key observations
+    - :chart_with_upwards_trend: **LINE CHART:**
+            - Huge use of oil, gas and coal globally, compared to other resources
+            - Renewable energy use is increasing
+        
+    - :earth_africa: **MAP:**  
+            - Nuclear energy is used only in Europe and North America
+            - Hydroelectric energy is a big part of South African and South American energy production
+    """)
+
 
     
 # Navigation
@@ -1520,9 +1627,7 @@ pages = {
     "Access to electricity in urban and rural areas": page_access_urban_rural,
     "Access to electricity vs GDP": page_gdp,
     "Access to electricity vs energy imports": page_energy_imports,
-    #"Energy sources??": page_energy_sources,
-    #"Access to electricity vs energy sources??": page_access_energy
-    
+    "Overview to energy sources around the world": page_energy_sources  
 }
 
 st.sidebar.title("Navigation")
