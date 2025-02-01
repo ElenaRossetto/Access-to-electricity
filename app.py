@@ -1414,7 +1414,7 @@ def page_introduction():
 
     st.markdown(
         """
-        <p style="color: #FFD700; font-size: 18px;">
+        <p style="color: red; font-size: 18px;">
             <em>Switch to <strong>DARK MODE</strong> for a better experience.
         </p>
         """,
@@ -1461,7 +1461,6 @@ def page_introduction():
     st.write(data)
     st.markdown('### Variables description: ')
     st.table(variable_table)
-    #st.write(data.filter((pl.col("Country Name")=="Kenya") & (pl.col("year")=="2000")))
     
     st.markdown("**Project by Elena Rossetto** | Data Source: [World Bank](https://databank.worldbank.org/source/world-development-indicators)", unsafe_allow_html=True)
     
