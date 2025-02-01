@@ -1521,9 +1521,9 @@ def page_access_urban_rural():
         - **Africa:** vary significantly. Some, like Tunisia, have high access in both rural and urban areas, while others show low access in both areas. Many have a large gap between urban and rural access.
     - :earth_africa: **MAP:**
         - Several African countries display huge disparities in electricity access between rural and urban areas.
-        - Disparity in electricity access is increasing over time in Africa, due to the fact that improvement in electricity access primarily starts from urban areas This urban-first growth widens the gap between cities and rural regions.    
+        - Disparity in electricity access is increasing over time in Africa, due to the fact that improvement in electricity access primarily starts from urban areas. This urban-first growth widens the gap between cities and rural regions.    
     ## :exclamation: Conclusions
-    - There is a clear difference between rural and urban electricity access, particularly in Africa, where disparities are often the most extreme. However, Asia, Oceania, and Central & South America also show some level of rural-urban inequality in electricity access.
+    :heavy_check_mark: There is a clear difference between rural and urban electricity access, particularly in Africa, where disparities are often the most extreme. However, Asia, Oceania, and Central & South America also show some level of rural-urban inequality in electricity access.
     """)
 
 
@@ -1637,18 +1637,21 @@ def page_energy_sources():
     st.markdown("<br><br><br>", unsafe_allow_html=True)
 
     st.markdown("""
-    ### :pushpin: Key observations
-    - :chart_with_upwards_trend: **LINE CHART:**
-            - Huge use of oil, gas and coal globally, compared to other resources
-            - Renewable energy use is increasing
-        
-    - :earth_africa: **MAP:**  
-            - Nuclear energy is used only in Europe and North America
-            - Hydroelectric energy is a big part of South African and South American energy production
+    ### :pushpin: Key Observations
+
+    :chart_with_upwards_trend: **LINE CHART:**  
+    - Fossil fuels (oil, gas, and coal) continue to dominate global energy consumption  
+    - The use of renewable energy resources has been steadily increasing
+
+    :earth_africa: **MAP:**  
+    - Nuclear energy is primarily concentrated in Europe and North America  
+    - Hydroelectric energy contributes significantly to total production in parts of Africa and South America  
+    - Although renewables are not yet widespread globally, their adoption—especially in Europe—is on the rise  
+    - Oil, gas, and coal remain common worldwide, but usage trends vary by country, with some showing increases and others decreases
     """)
 
 
-    
+        
 # Navigation
 pages = {
     "Introduction": page_introduction,
