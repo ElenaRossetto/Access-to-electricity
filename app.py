@@ -1400,7 +1400,7 @@ def page_introduction():
                 margin-top: -160px;  /* Moves the text over the image */
             }
             .title-text {
-                font-size: 100px;
+                font-size: 80px;
                 font-weight: bold;
                 color: white;
                 text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
@@ -1411,11 +1411,40 @@ def page_introduction():
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown(""" 
-    ## How does the access to electricity vary around the WORLD over TIME?
-    ## How does it differ in URBAN and RURAL areas?
-    ## Is this related to GDP or ENERGY IMPORTS?
-    """)
+
+    st.markdown(
+        """
+        <p style="color: #FFD700; font-size: 18px;">
+            <em>Switch to <strong>DARK MODE</strong> for a better experience.
+        </p>
+        """,
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        """
+        <p style="color: white; font-size:30px;">
+            Over 640 million people (8% of the global population) in 2022 did not have access to electricity.
+            Let's find out more about access to electricity worldwide from 1960 to 2022.   
+        </p>
+        <br> <br> <br>
+        <h2 style="color: #FFDD57; font-size:50px;">
+            KEY RESEARCH QUESTION
+        </h2>
+
+        <h2 style="color: white;">
+            How does the access to electricity vary around the
+            <span style="color: #FFDD57;">WORLD</span> over
+            <span style="color: #FFDD57;">TIME</span>?  
+            How does it differ in <span style="color: #FFDD57;">URBAN</span> and
+            <span style="color: #FFDD57;">RURAL</span> areas?
+            Is this related to <span style="color: #FFDD57;">GDP</span> or
+            <span style="color: #FFDD57;">ENERGY IMPORTS</span>?
+        </h2>
+        """,
+        unsafe_allow_html=True
+    )
+
+
 
     st.markdown("<br><br>", unsafe_allow_html=True) 
 
